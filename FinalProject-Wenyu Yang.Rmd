@@ -1,0 +1,132 @@
+---
+title: 'Final Project: Guidance Document'
+author: "Wenyu Yang"
+date: "Due December 17, 2019"
+output:
+  html_document:
+    df_print: paged
+---
+# Purpose
+
+The research question that motivates the overall analysis: “Whether different gender has different performance on the math, reading, and writing exam? Which gender performs better on the overall academic performance?”
+
+
+# Set Up
+
+```{r message=FALSE, warning=FALSE}
+# clean up the RSrudio environment
+rm(list = ls())
+# load necessary packages
+library(datasets)
+library(DataComputing)
+library(tidyverse)
+
+```
+
+# Data Access
+
+The data1 is the primary source, and the data2 is the secondary source which loaded from an R package "datasets".
+I inspect the data by using the the head() and data.frame() functions to show the data tables.
+
+```{r}
+# import and inspect the first data source
+data1 = read.csv("StudentsPerformance.csv")
+head(data1)
+# import and inspect the second data source
+data2<- UCBAdmissions
+data.frame(data2)
+```
+
+# Data Wrangling
+
+Assign a new dataset newdata1 with adding a new variable total.score by mutate() function
+
+```{r}
+newdata1 <-  
+  data1 %>%
+  mutate(total.score = math.score+reading.score+writing.score) %>%
+  select(gender, math.score, reading.score, writing.score, total.score)
+newdata1
+```
+
+Since the data2 is a table, in order to use it I have to convert the table into a data frame. Then I use summarise() function to find the total Freq in Admiited and Rejected for each gender. I use mutate() function to add one new variable admit.rate to see whether female or male admitted rate is higher. 
+
+I also use the spread() function to change the newdata2 from wide formate to narrow formate which provide more details and clear data table for the data visualizations.
+However, when I join the newdata1 and newdata2, I realize that the first letter of female and male in newdata2 is capital. It will not match with the female and male in newdata1. Therefore, I use tolower() function to change the capital letter to lowercase. Then, the newdata2 and newdata1 and be joined together. 
+
+```{r}
+data2 <- data.frame(data2)
+newdata2 <-
+  data2 %>%
+  mutate(Gender=tolower(Gender)) %>%
+  group_by(Admit, Gender) %>%
+  summarise(total=sum(Freq)) %>%
+  spread(key=Admit, value=total, fill=0) %>%
+  group_by(Gender) %>%
+  mutate(total=sum(Admitted+Rejected),
+         admit.rate=total/Admitted)
+newdata2
+```
+
+Performance is produced by joining newdata1 to newdata2.
+I will use this Performance for the later Data Visualization.
+
+```{r}
+Performance <-
+  newdata1 %>%
+  left_join(newdata2 %>% select(Gender,admit.rate),
+            by=c("gender"="Gender"))
+Performance
+```
+
+
+
+# Data Visualization
+
+This scatterplot shows that in the math exam, male tends to perform better than female. It also shows that female tends to have larger variance since there are outliers at the lower left of the graph.
+In order to view the result and differences more clearly, I use two different colors for each gender. The red color demonstrate female, and the blue color demonstrate male.
+
+```{r}
+Performance %>%
+  ggplot(aes(x=total.score,y=math.score)) +
+  geom_point(aes(shape=gender,color=gender)) 
+```
+
+This scatterplot shows that in the reading exam, female tends to perform better than male It also shows that female tends to have larger variance since there are outliers at the lower left of the graph.
+In order to view the result and differences more clearly, I use two different colors for each gender. The red color demonstrate female, and the blue color demonstrate male.
+
+```{r}
+Performance %>%
+  ggplot(aes(x=total.score,y=reading.score)) +
+  geom_point(aes(shape=gender, color=gender))
+```
+
+This plot shows that in the writing exam, female tends to perform better than male It also shows that female tends to have larger variance since there are outliers at the lower left of the graph.
+In order to view the result and differences more clearly, I use two different colors for each gender. The red color demonstrate female, and the blue color demonstrate male.
+
+```{r}
+Performance %>%
+  ggplot(aes(x=total.score,y=writing.score)) +
+  geom_line(aes(linetype=gender,color=gender))
+```
+
+The boxplot shows that female tends to perform better than male in the overall exam performation. It also shows that female tends to have larger variance since there are outliers at the bottom of the graph. Female also has large median than the male. Female also have large admit.rate than the male.
+
+```{r}
+Performance %>%
+  ggplot(aes(x=gender,y=total.score)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 1) +
+  facet_wrap(~ admit.rate)
+```
+
+The plot displays the distribution density of total.score for female and male.
+The red shading area demonstrates the density of total.score for female, and the blue shading area demonstrates the density of total.score for male.
+The plots shows that female tends to perform exam better than male. Female has higher density as the total.score increases than male.
+
+```{r}
+ggplot(Performance, aes(x=total.score, group=gender)) +
+  geom_density(aes(color=gender, fill=gender), alpha=0.5)
+```
+
+# Conclusion
+As the graphs show above, we are able to conclude that male tends to perform better than female in the math exam. Female tends to perform better than male in botg the reading and writing exams. On the overall academic performance, female tends to have higher total exam grades than male. Female also has higher admitted rate on the UBC admission. 
